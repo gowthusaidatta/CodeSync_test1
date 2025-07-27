@@ -1,67 +1,71 @@
+<!-- Modified checking.html for CodeSync_test1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeSync - Scores</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>CodeSync - Your Coding Stats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.5/axios.min.js"></script>
 </head>
-<body class="bg-gray-50">
-  <!-- Navbar (Same as index.html) -->
-  <nav class="bg-blue-600 text-white p-4 shadow-md">
-    <div class="container mx-auto flex justify-between items-center">
-      <a href="index.html" class="flex items-center gap-2">
-        <img src="https://via.placeholder.com/40" alt="Logo" class="h-8">
-        <span class="text-xl font-bold">CodeSync</span>
-      </a>
-      <div class="flex gap-4">
-        <a href="profile.html" class="hover:underline">Profile</a>
-        <a href="checking.html" class="hover:underline">Scores</a>
-        <a href="contact.html" class="hover:underline">Contact</a>
-        <a href="https://main.d36cacnkzbxlr4.amplifyapp.com" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-blue-100">Amplify</a>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6">
+  <div class="w-full max-w-2xl p-6 bg-white rounded-xl shadow-lg">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Your Coding Scores</h1>
+    <div id="loading" class="text-center text-gray-500">Fetching scores...</div>
+    <div id="results" class="hidden space-y-4">
+      <div class="p-4 bg-gray-100 rounded-lg">
+        <h2 class="font-semibold text-xl">LeetCode</h2>
+        <p id="leetcodeScore" class="text-gray-700">Loading...</p>
+      </div>
+      <div class="p-4 bg-gray-100 rounded-lg">
+        <h2 class="font-semibold text-xl">CodeChef</h2>
+        <p id="codechefScore" class="text-gray-700">Loading...</p>
+      </div>
+      <div class="p-4 bg-gray-100 rounded-lg">
+        <h2 class="font-semibold text-xl">HackerRank</h2>
+        <p id="hackerrankScore" class="text-gray-700">Loading...</p>
+      </div>
+      <div class="p-4 bg-gray-100 rounded-lg">
+        <h2 class="font-semibold text-xl">GeeksforGeeks</h2>
+        <p id="gfgScore" class="text-gray-700">Loading...</p>
       </div>
     </div>
-  </nav>
+  </div>
 
-  <!-- Dashboard Content -->
-  <main class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8">Your Coding Scores</h1>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- GitHub Card -->
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-2">GitHub Activity</h2>
-        <div id="github-score" class="mt-4 text-2xl font-bold text-blue-600">Loading...</div>
-      </div>
-      <!-- Competitive Coding Card -->
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-2">Competitive Coding</h2>
-        <div id="competitive-score" class="mt-4 text-2xl font-bold text-green-600">Loading...</div>
-      </div>
-      <!-- Overall Card -->
-      <div class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-xl font-semibold mb-2">Overall Score</h2>
-        <div id="overall-score" class="mt-4 text-2xl font-bold text-purple-600">Loading...</div>
-      </div>
-    </div>
-  </main>
-
-  <!-- Script to fetch scores -->
   <script>
-    // Mock API calls (replace with actual endpoints)
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        document.getElementById('github-score').textContent = "85%";
-        document.getElementById('competitive-score').textContent = "72%";
-        document.getElementById('overall-score').textContent = "79%";
-      }, 1000);
-    });
-  </script>
+    const leetcode = sessionStorage.getItem("leetcode");
+    const codechef = sessionStorage.getItem("codechef");
+    const hackerrank = sessionStorage.getItem("hackerrank");
+    const gfg = sessionStorage.getItem("gfg");
 
-  <!-- Footer (Same as index.html) -->
-  <footer class="bg-gray-800 text-white py-6 mt-12">
-    <div class="container mx-auto text-center">
-      <p>© 2024 CodeSync. Hosted on <a href="https://gowthusaidatta.github.io/CodeSync_test1/" class="underline">GitHub</a>.</p>
-    </div>
-  </footer>
+    async function fetchScores() {
+      try {
+        const [gfgRes, othersRes] = await Promise.all([
+          axios.get(`https://1irslt4qe5.execute-api.us-east-1.amazonaws.com/prob/get-score?username=${gfg}`),
+          axios.get(`https://8teu07es5h.execute-api.us-east-1.amazonaws.com/prob/get-score`, {
+            params: {
+              leetcode,
+              codechef,
+              hackerrank
+            }
+          })
+        ]);
+
+        document.getElementById("leetcodeScore").innerText = `Total Problems Solved: ${othersRes.data.leetcode.totalSolved}`;
+        document.getElementById("codechefScore").innerText = `Rating: ${othersRes.data.codechef.rating}`;
+        document.getElementById("hackerrankScore").innerText = `Badges: ${othersRes.data.hackerrank.badges.length}`;
+        document.getElementById("gfgScore").innerText = `Coding Score: ${gfgRes.data.score || 'N/A'}`;
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("results").classList.remove("hidden");
+
+      } catch (err) {
+        document.getElementById("loading").innerText = "Failed to fetch scores. Please try again.";
+        console.error(err);
+      }
+    }
+
+    fetchScores();
+  </script>
 </body>
 </html>
