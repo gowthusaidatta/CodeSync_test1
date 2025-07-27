@@ -1,71 +1,81 @@
-<!-- Modified checking.html for CodeSync_test1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeSync - Your Coding Stats</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeSync - Check Your Coding Profiles</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.5/axios.min.js"></script>
+  <script type="module">
+    import { Auth } from 'https://cdn.jsdelivr.net/npm/aws-amplify@4.3.27/+esm'
+    import awsExports from './js/amplify_config.js'
+    Auth.configure(awsExports)
+
+    Auth.currentAuthenticatedUser()
+      .then(user => console.log('✅ Authenticated as:', user.username))
+      .catch(() => window.location.href = 'https://main.d36cacnkzbxlr4.amplifyapp.com')
+  </script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center p-6">
-  <div class="w-full max-w-2xl p-6 bg-white rounded-xl shadow-lg">
-    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Your Coding Scores</h1>
-    <div id="loading" class="text-center text-gray-500">Fetching scores...</div>
-    <div id="results" class="hidden space-y-4">
-      <div class="p-4 bg-gray-100 rounded-lg">
-        <h2 class="font-semibold text-xl">LeetCode</h2>
-        <p id="leetcodeScore" class="text-gray-700">Loading...</p>
-      </div>
-      <div class="p-4 bg-gray-100 rounded-lg">
-        <h2 class="font-semibold text-xl">CodeChef</h2>
-        <p id="codechefScore" class="text-gray-700">Loading...</p>
-      </div>
-      <div class="p-4 bg-gray-100 rounded-lg">
-        <h2 class="font-semibold text-xl">HackerRank</h2>
-        <p id="hackerrankScore" class="text-gray-700">Loading...</p>
-      </div>
-      <div class="p-4 bg-gray-100 rounded-lg">
-        <h2 class="font-semibold text-xl">GeeksforGeeks</h2>
-        <p id="gfgScore" class="text-gray-700">Loading...</p>
-      </div>
+<body class="bg-gray-100 min-h-screen p-6 flex justify-center items-center">
+  <div class="w-full max-w-xl bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-2xl font-bold text-center mb-4 text-blue-700">Enter Your Coding Profile Info</h1>
+    <form id="checkForm" class="space-y-4">
+      <input type="text" id="leetcode" placeholder="LeetCode Username or URL" class="w-full p-2 border rounded" required />
+      <input type="text" id="codechef" placeholder="CodeChef Username or URL" class="w-full p-2 border rounded" required />
+      <input type="text" id="hackerrank" placeholder="HackerRank Username or URL" class="w-full p-2 border rounded" required />
+      <input type="text" id="gfg" placeholder="GeeksforGeeks Username or URL" class="w-full p-2 border rounded" required />
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Check Scores</button>
+    </form>
+
+    <div id="result" class="mt-6 text-sm text-gray-700 hidden">
+      <h2 class="font-semibold text-lg mb-2">Results:</h2>
+      <p id="lc"></p>
+      <p id="cc"></p>
+      <p id="hr"></p>
+      <p id="gfgScore"></p>
     </div>
   </div>
 
   <script>
-    const leetcode = sessionStorage.getItem("leetcode");
-    const codechef = sessionStorage.getItem("codechef");
-    const hackerrank = sessionStorage.getItem("hackerrank");
-    const gfg = sessionStorage.getItem("gfg");
+    function extractUsername(input) {
+      if (!input.includes('/')) return input.trim();
+      const parts = input.split('/');
+      return parts.filter(Boolean).pop();
+    }
 
-    async function fetchScores() {
+    document.getElementById("checkForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const leetcode = extractUsername(document.getElementById("leetcode").value);
+      const codechef = extractUsername(document.getElementById("codechef").value);
+      const hackerrank = extractUsername(document.getElementById("hackerrank").value);
+      const gfg = extractUsername(document.getElementById("gfg").value);
+
+      // Save to sessionStorage
+      sessionStorage.setItem("leetcode", leetcode);
+      sessionStorage.setItem("codechef", codechef);
+      sessionStorage.setItem("hackerrank", hackerrank);
+      sessionStorage.setItem("gfg", gfg);
+
       try {
-        const [gfgRes, othersRes] = await Promise.all([
+        const [gfgRes, allRes] = await Promise.all([
           axios.get(`https://1irslt4qe5.execute-api.us-east-1.amazonaws.com/prob/get-score?username=${gfg}`),
           axios.get(`https://8teu07es5h.execute-api.us-east-1.amazonaws.com/prob/get-score`, {
-            params: {
-              leetcode,
-              codechef,
-              hackerrank
-            }
+            params: { leetcode, codechef, hackerrank }
           })
         ]);
 
-        document.getElementById("leetcodeScore").innerText = `Total Problems Solved: ${othersRes.data.leetcode.totalSolved}`;
-        document.getElementById("codechefScore").innerText = `Rating: ${othersRes.data.codechef.rating}`;
-        document.getElementById("hackerrankScore").innerText = `Badges: ${othersRes.data.hackerrank.badges.length}`;
-        document.getElementById("gfgScore").innerText = `Coding Score: ${gfgRes.data.score || 'N/A'}`;
-
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("results").classList.remove("hidden");
+        document.getElementById("result").classList.remove("hidden");
+        document.getElementById("lc").innerText = `LeetCode: ${allRes.data.leetcode.totalSolved} problems solved`;
+        document.getElementById("cc").innerText = `CodeChef: Rating ${allRes.data.codechef.rating}`;
+        document.getElementById("hr").innerText = `HackerRank: ${allRes.data.hackerrank.badges.length} badges`;
+        document.getElementById("gfgScore").innerText = `GFG: Score ${gfgRes.data.score}`;
 
       } catch (err) {
-        document.getElementById("loading").innerText = "Failed to fetch scores. Please try again.";
+        alert(\"Error fetching data. Please check usernames or API status.\");
         console.error(err);
       }
-    }
-
-    fetchScores();
+    });
   </script>
 </body>
 </html>
